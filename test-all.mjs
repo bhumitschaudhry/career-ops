@@ -469,6 +469,7 @@ const systemFiles = [
   '.claude/skills/career-ops/SKILL.md',
   '.opencode/skills/career-ops/SKILL.md',
   '.antigravitycli/skills/career-ops/SKILL.md',
+  '.grok/skills/career-ops/SKILL.md',
 ];
 
 for (const f of systemFiles) {
@@ -1134,6 +1135,7 @@ const symlinks = [
   '.claude/skills/career-ops/SKILL.md',
   '.opencode/skills/career-ops/SKILL.md',
   '.antigravitycli/skills/career-ops/SKILL.md',
+  '.grok/skills/career-ops/SKILL.md',
 ];
 
 let canonicalReal = null;
