@@ -16,9 +16,15 @@
  */
 
 import { execFile, execFileSync, execSync } from 'child_process';
-import { readFileSync, writeFileSync, existsSync, unlinkSync, rmSync, lstatSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, unlinkSync, rmSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
+import {
+  ensureSkillEntrypoints,
+  materializeSkillEntrypoints,
+} from './scaffolder/bin/skill-entrypoints.mjs';
+
+export { materializeSkillEntrypoints, ensureSkillEntrypoints };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = __dirname;
@@ -160,18 +166,6 @@ const SYSTEM_PATHS = [
   'DOCKER.md',
 ];
 
-const CANONICAL_SKILL_PATH = '.agents/skills/career-ops/SKILL.md';
-const SKILL_ENTRYPOINTS = [
-  {
-    path: '.claude/skills/career-ops/SKILL.md',
-    pointer: '../../../.agents/skills/career-ops/SKILL.md',
-  },
-  {
-    path: '.opencode/skills/career-ops/SKILL.md',
-    pointer: '../../../.agents/skills/career-ops/SKILL.md',
-  },
-];
-
 // User layer paths — NEVER touch these (safety check)
 const USER_PATHS = [
   'cv.md',
@@ -280,44 +274,6 @@ function mergePathLists(...lists) {
 
 function repoPath(root, path) {
   return join(root, ...path.split('/'));
-}
-
-export function materializeSkillEntrypoints(root = ROOT) {
-  const canonicalPath = repoPath(root, CANONICAL_SKILL_PATH);
-  if (!existsSync(canonicalPath)) return [];
-
-  let canonicalContent = '';
-  try {
-    canonicalContent = readFileSync(canonicalPath, 'utf-8');
-  } catch {
-    return [];
-  }
-  const materialized = [];
-
-  for (const entry of SKILL_ENTRYPOINTS) {
-    const entryPath = repoPath(root, entry.path);
-    if (!existsSync(entryPath)) continue;
-
-    let stat = null;
-    try {
-      stat = lstatSync(entryPath);
-    } catch {
-      continue;
-    }
-    if (stat.isSymbolicLink()) continue;
-    if (!stat.isFile()) continue;
-
-    try {
-      const content = readFileSync(entryPath, 'utf-8').trim();
-      if (content !== entry.pointer) continue;
-      writeFileSync(entryPath, canonicalContent);
-    } catch {
-      continue;
-    }
-    materialized.push(entry.path);
-  }
-
-  return materialized;
 }
 
 export function prepareMaterializedSkillEntrypointsForStage(paths, root = ROOT) {
@@ -583,7 +539,7 @@ async function apply() {
       }
     }
 
-    const materializedSkillEntrypoints = materializeSkillEntrypoints();
+    const materializedSkillEntrypoints = ensureSkillEntrypoints(ROOT);
     if (materializedSkillEntrypoints.length > 0) {
       for (const path of materializedSkillEntrypoints) {
         if (!updated.includes(path)) updated.push(path);

@@ -1219,6 +1219,51 @@ console.log('\n12a. Skill entrypoint materialization');
   }
 }
 
+console.log('\n12b. Skill entrypoint bootstrap (npx / old releases)');
+
+{
+  const fixtureRoot = mkdtempSync(join(tmpdir(), 'career-ops-ensure-skills-'));
+  try {
+    const canonicalDir = join(fixtureRoot, '.agents', 'skills', 'career-ops');
+    const claudeDir = join(fixtureRoot, '.claude', 'skills', 'career-ops');
+    mkdirSync(canonicalDir, { recursive: true });
+    mkdirSync(claudeDir, { recursive: true });
+
+    const fixtureSkill = '---\nname: career-ops\n---\n\n# canonical skill\n';
+    const pointer = '../../../.agents/skills/career-ops/SKILL.md';
+    writeFileSync(join(canonicalDir, 'SKILL.md'), fixtureSkill);
+    writeFileSync(join(claudeDir, 'SKILL.md'), pointer);
+
+    const skills = await import(pathToFileURL(join(ROOT, 'scaffolder/bin/skill-entrypoints.mjs')).href);
+    const touched = skills.ensureSkillEntrypoints(fixtureRoot).sort();
+    const expectedTouched = [
+      '.antigravitycli/skills/career-ops/SKILL.md',
+      '.claude/skills/career-ops/SKILL.md',
+      '.grok/skills/career-ops/SKILL.md',
+      '.opencode/skills/career-ops/SKILL.md',
+      '.qwen/skills/career-ops/SKILL.md',
+    ];
+
+    if (JSON.stringify(touched) === JSON.stringify(expectedTouched)) {
+      pass('ensureSkillEntrypoints bootstraps all CLI skill entrypoints');
+    } else {
+      fail(`unexpected bootstrapped skill entrypoints: ${JSON.stringify(touched)}`);
+    }
+
+    const grokSkill = readFileSync(join(fixtureRoot, '.grok', 'skills', 'career-ops', 'SKILL.md'), 'utf-8');
+    const claudeSkill = readFileSync(join(claudeDir, 'SKILL.md'), 'utf-8');
+    if (grokSkill === fixtureSkill && claudeSkill === fixtureSkill) {
+      pass('ensureSkillEntrypoints materializes canonical skill content');
+    } else {
+      fail('bootstrapped skill entrypoints do not match canonical content');
+    }
+  } catch (e) {
+    fail(`skill entrypoint bootstrap test crashed: ${e.message}`);
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+}
+
 {
   const fixtureRoot = mkdtempSync(join(tmpdir(), 'career-ops-skills-unreadable-'));
   try {
